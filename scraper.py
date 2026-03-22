@@ -9,11 +9,10 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-final_data = []
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"}
-
 # Function to send request and fetch data from webpage
-def scrape_pages(url):    
+def scrape_pages():        
+    url = "https://www.scrapethissite.com/pages/simple/"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"}
     logging.info("Sending request to the website...")
     response = requests.get(url, headers=headers, timeout=10)
     response.raise_for_status()
@@ -22,10 +21,10 @@ def scrape_pages(url):
 
 # Function to parse the html and obtain necessary data
 def extract_data(response):
+    countries = []
     soup = BeautifulSoup(response.content, "lxml")
     country_tags = soup.find_all("div", class_="col-md-4 country")
     logging.info(f"Found {len(country_tags)} country blocks")
-    country_data = []
 
     for country in country_tags:
         try:
@@ -38,17 +37,17 @@ def extract_data(response):
             continue
 
         # Appending data to our main global list
-        country_data.append({
+        countries.append({
             "Country": name,
             "Capital": capital,
             "Population": population,
             "Area": area        # in square kilometers
         })
-    return country_data
+    return countries
 
 # This saves data into CSV and JSON using Pandas
-def save_data(final_data):
-    df = pd.DataFrame(final_data)   # makes dataframe in pandas
+def save_data(countries):
+    df = pd.DataFrame(countries)   # makes dataframe in pandas
     logging.info("Converting numeric columns...")
         # This changes the format of Population and Area to numeric so that data analysis can be easy
     df["Population"] = pd.to_numeric(df["Population"], errors="coerce")
@@ -67,9 +66,8 @@ def save_data(final_data):
 
 try:
     # this safely sends request to the site...
-    response = scrape_pages("https://www.scrapethissite.com/pages/simple/")     # stores response in a variable
+    response = scrape_pages()     # stores response in a variable
     data = extract_data(response)       # extracts data by parsing html in BeautifulSoup and stores in a variable
-    final_data.extend(data)     # Pandas uses that extracted data and saves that into CSV and JSON after cleaning & formatting
 
 except requests.exceptions.ConnectionError:
     logging.error("No Internet - Unable to Connect to the Site.")
@@ -83,5 +81,5 @@ except Exception as e:
     logging.exception(f"Unexpected error: {e}")
 
 finally:    # whatever goes wrong in code, this finally block would save the data in this 'finally' block
-    if final_data:
-        save_data(final_data=final_data)
+    if data:
+        save_data(countries=data)
